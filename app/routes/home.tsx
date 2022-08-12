@@ -10,6 +10,7 @@ import {  getFilteredKudos, getRecentKudos} from "~/utils/kudos.server";
 import type { Kudo as IKudo, Profile, Prisma } from "@prisma/client";
 import { SearchBar } from '~/components/search-bar';
 import { RecentBar } from '~/components/recent-bar'
+import { getUser } from '~/utils/auth.server'
 
 interface KudoWithProfile extends IKudo {
     author: {
@@ -19,6 +20,7 @@ interface KudoWithProfile extends IKudo {
 
 export const loader: LoaderFunction = async({ request}) => {
   const userId  =  await requireUserId(request)
+  const user = await getUser(request);
 
 
  const url = new URL(request.url)
@@ -63,20 +65,20 @@ export const loader: LoaderFunction = async({ request}) => {
   const users = await getOtherUsers(userId);
   const kudos = await getFilteredKudos(userId, sortOptions, textFilter)
 
-  return json({ users, kudos, recentKudos})
+  return json({ users, kudos, recentKudos, user})
 
    
 }
 
 export default function Home() {
-    const { users, kudos, recentKudos } = useLoaderData()
+    const { users, kudos, recentKudos, user } = useLoaderData()
     return (
         <Layout>
             <Outlet/>
             <div className='h-full flex'>
                 <UserPanel users={users}/>
                 <div className='flex-1 flex flex-col'>
-                    <SearchBar/>
+                    <SearchBar profile={user.profile}/>
                     <div className='flex-1 flex'>
                     <div className='w-full p-10 flex flex-col gap-y-4'>
                         {kudos.map((kudo: KudoWithProfile) => (
