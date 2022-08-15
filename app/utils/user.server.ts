@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import type { RegisterForm } from './types.server';
 import { prisma } from "./prisma.server";
+import { Profile } from "@prisma/client";
 
 export async function createUser(user:RegisterForm) {
     const hashedPassword = await bcrypt.hash(user.password, 10);
@@ -38,6 +39,19 @@ export const getUserById = async (userId: string) => {
     return await prisma.user.findUnique({ 
         where: {
             id: userId
+        }
+    })
+}
+
+export const updateUser = async (userId: string, profile: Partial<Profile>) => {
+    await prisma.user.update({
+        where: {
+            id: userId
+        },
+        data: {
+            profile: {
+                update: profile
+            }
         }
     })
 }

@@ -1,12 +1,51 @@
 import { useState } from 'react';
 import { useLoaderData } from "@remix-run/react";
-import {  json } from "@remix-run/node";
-import type { LoaderFunction } from "@remix-run/node";
-import {  getUser} from "~/utils/auth.server";
+import {  json, redirect } from "@remix-run/node";
+import type { LoaderFunction, ActionFunction } from "@remix-run/node";
+import type { Department} from "@prisma/client"
+import {  getUser, requireUserId} from "~/utils/auth.server";
 import { departments } from "~/utils/constants";
+import { validateName } from '~/utils/validators.server'
+import { updateUser } from '~/utils/user.server';
 import { FormField } from "~/components/form-field";
 import { Modal } from "~/components/modal";
 import {  SelectBox } from "~/components/select-box";
+
+
+
+export const action: ActionFunction = async ({ request }) => {
+    const userId = await requireUserId(request)
+    const form = await request.formData();
+
+    let firstName = form.get('firstName');
+    let lastName = form.get('lastName')
+    let department = form.get('department')
+
+    if (
+        typeof firstName !== 'string'
+        || typeof lastName !== 'string'
+        || typeof department !== 'string'
+    ) {
+        return json({ error: 'Invalid Form Data'}, { status: 400})
+    }
+
+    const errors = {
+        firstName: validateName(firstName),
+        lastName: validateName(lastName),
+        department: validateName(firstName)
+    }
+
+    if (Object.values(errors).some(Boolean)) {
+        return json({errors, fields: { department, firstName, lastName}}, { status: 400})
+    }
+
+    await updateUser(userId, {
+        firstName,
+        lastName,
+        department: department as Department
+    })
+    return redirect('/home')
+}
 
 export const loader: LoaderFunction = async ({ request}) => {
     const user = await getUser(request);
