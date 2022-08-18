@@ -72,10 +72,7 @@ export default function ProfileSettings() {
     const handleFileUpload = async (file: File) => {
         let inputFormData = new FormData();
         inputFormData.append('profile-pic', file)
-
-        console.log(file)
-        console.log('=========')
-        console.log(inputFormData.get('profile-pic'))
+        
         const response = await fetch('/avatar',{
              method: 'POST',
              body: inputFormData
