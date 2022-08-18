@@ -10,6 +10,7 @@ import { updateUser } from '~/utils/user.server';
 import { FormField } from "~/components/form-field";
 import { Modal } from "~/components/modal";
 import {  SelectBox } from "~/components/select-box";
+import { ImageUploader } from "~/components/image-uploader";
 
 
 
@@ -60,18 +61,43 @@ export default function ProfileSettings() {
     const [formData, setFormData] = useState({
         firstName:  user?.profile?.firstName,
         lastName: user?.profile?.lastName,
-        department: (user?.profilee?.department || 'MARKETING')
+        department: (user?.profilee?.department || 'MARKETING'),
+        profilePicture: user?.profile?.profilePiture || ''
     })
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>, field: string) => {
         setFormData( form => ({ ...form, [field] : event.target.value }))
     }
 
+    const handleFileUpload = async (file: File) => {
+        let inputFormData = new FormData();
+        inputFormData.append('profile-pic', file)
+
+        console.log(file)
+        console.log('=========')
+        console.log(inputFormData.get('profile-pic'))
+        const response = await fetch('/avatar',{
+             method: 'POST',
+             body: inputFormData
+        })
+
+        const { imageUrl } = await response.json()    
+        
+        setFormData({
+            ...formData,
+            profilePicture: imageUrl
+        })
+    }
+
     return (
         <Modal isOpen={true} className="w-1/3">
             <div className="p-3">
                 <h2 className="text-4xl font-semibold text-blue-600 text-center mb-4">Your Profile</h2>
+
                     <div className="flex">
+                        <div className='W-1/3'>
+                            <ImageUploader onChange={handleFileUpload} imageUrl={formData?.profilePicture || ''}/>
+                        </div>
                         <div className="flex-1">
                             <form method="post">
                                 <FormField htmlFor="firstName" label="First Name" value={formData.firstName} onChange={ e => handleInputChange(e, 'firstName')} />
