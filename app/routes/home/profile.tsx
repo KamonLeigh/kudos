@@ -3,10 +3,10 @@ import { useLoaderData } from "@remix-run/react";
 import {  json, redirect } from "@remix-run/node";
 import type { LoaderFunction, ActionFunction } from "@remix-run/node";
 import type { Department} from "@prisma/client"
-import {  getUser, requireUserId} from "~/utils/auth.server";
+import {  getUser, requireUserId, logout} from "~/utils/auth.server";
 import { departments } from "~/utils/constants";
 import { validateName } from '~/utils/validators.server'
-import { updateUser } from '~/utils/user.server';
+import { updateUser, deleteUser } from '~/utils/user.server';
 import { FormField } from "~/components/form-field";
 import { Modal } from "~/components/modal";
 import {  SelectBox } from "~/components/select-box";
@@ -21,31 +21,43 @@ export const action: ActionFunction = async ({ request }) => {
     let firstName = form.get('firstName');
     let lastName = form.get('lastName')
     let department = form.get('department')
+    const action = form.get('_action')
+    switch (action) {
+        case 'save':
+            
+            if (
+                typeof firstName !== 'string'
+                || typeof lastName !== 'string'
+                || typeof department !== 'string'
+            ) {
+                return json({ error: 'Invalid Form Data'}, { status: 400})
+            }
 
-    if (
-        typeof firstName !== 'string'
-        || typeof lastName !== 'string'
-        || typeof department !== 'string'
-    ) {
-        return json({ error: 'Invalid Form Data'}, { status: 400})
-    }
+            const errors = {
+                firstName: validateName(firstName),
+                lastName: validateName(lastName),
+                department: validateName(firstName)
+            }
 
-    const errors = {
-        firstName: validateName(firstName),
-        lastName: validateName(lastName),
-        department: validateName(firstName)
-    }
+            if (Object.values(errors).some(Boolean)) {
+                return json({errors, fields: { department, firstName, lastName}}, { status: 400})
+            }
 
-    if (Object.values(errors).some(Boolean)) {
-        return json({errors, fields: { department, firstName, lastName}}, { status: 400})
-    }
+            await updateUser(userId, {
+                firstName,
+                lastName,
+                department: department as Department
+            })
+            return redirect('/home')
+     case 'delete':
+        await deleteUser(userId)
+        return logout(request)
+    
+      default:
+        
+      return json({ error: 'Invalid Form Data'}, { status: 400})
 
-    await updateUser(userId, {
-        firstName,
-        lastName,
-        department: department as Department
-    })
-    return redirect('/home')
+   }
 }
 
 export const loader: LoaderFunction = async ({ request}) => {
@@ -72,7 +84,7 @@ export default function ProfileSettings() {
     const handleFileUpload = async (file: File) => {
         let inputFormData = new FormData();
         inputFormData.append('profile-pic', file)
-        
+
         const response = await fetch('/avatar',{
              method: 'POST',
              body: inputFormData
@@ -96,7 +108,7 @@ export default function ProfileSettings() {
                             <ImageUploader onChange={handleFileUpload} imageUrl={formData?.profilePicture || ''}/>
                         </div>
                         <div className="flex-1">
-                            <form method="post">
+                            <form method="post" onSubmit={e => !confirm('Are you sure?') ? e.preventDefault() : true}>
                                 <FormField htmlFor="firstName" label="First Name" value={formData.firstName} onChange={ e => handleInputChange(e, 'firstName')} />
                                 <FormField htmlFor="lastName" label="Last Name" value={formData.firstName} onChange={ e => handleInputChange(e, 'lastName')} />
                                 <SelectBox
@@ -107,8 +119,14 @@ export default function ProfileSettings() {
                                     value={formData.department}
                                     onChange={e => handleInputChange(e , 'department')}
                                 />
+                                <button name='_action' value="delete" className='rounded-xl bg-yellow-300 font-semibold text-blue-600 px-16 py-2 transition duration-300 ease-in-out hover:bg-yellow-400 hover:translate-y-1'>
+                                    Delete Account
+                                </button>
                                 <div className="w-full text-right mt-4">
-                                    <button className="rounded-xl bg-yellow-300 font-semibold text-blue-600 px-16 py-2 transiion duration-300 ease-in-out hover:g-yellow-400">
+                                    <button className="rounded-xl bg-yellow-300 font-semibold text-blue-600 px-16 py-2 transiion duration-300 ease-in-out hover:g-yellow-400"
+                                        name='_action'
+                                        value='save'
+                                    >
                                         Save
                                     </button>
                                 </div>
