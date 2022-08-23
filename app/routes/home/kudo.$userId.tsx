@@ -147,7 +147,7 @@ export default function KudoModal() {
                             <SelectBox
                                 options={emojis}
                                 name="emoji"
-                                value={formData.style.textColour}
+                                value={formData.style.emoji}
                                 label="Emoji"
                                 onChange={e => handleStyleChange(e, 'emoji')}
                                 containerClassName="w-36"
